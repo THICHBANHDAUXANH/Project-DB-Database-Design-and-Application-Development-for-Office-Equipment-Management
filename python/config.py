@@ -8,3 +8,10 @@ DB_CONFIG = {
     "password": os.getenv("OEM_DB_PASSWORD", ""),
     "database": os.getenv("OEM_DB_NAME", "office_equipment_management"),
 }
+
+try:
+    from config_local import DB_CONFIG as LOCAL_DB_CONFIG
+
+    DB_CONFIG.update(LOCAL_DB_CONFIG)
+except ImportError:
+    pass

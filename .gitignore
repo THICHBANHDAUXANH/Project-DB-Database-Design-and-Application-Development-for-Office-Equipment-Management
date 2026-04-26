@@ -4,6 +4,8 @@ __pycache__/
 *.pyo
 .env
 python/.env
+python/config_local.py
+tmp_pdf_check/
 images/
 report/
 *.xlsx
