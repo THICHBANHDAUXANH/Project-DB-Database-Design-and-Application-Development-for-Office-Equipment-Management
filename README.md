@@ -47,7 +47,3 @@ python python/main.py
 ```bash
 python -m streamlit run python/app.py
 ```
-
-## Notes
-
-The GitHub-ready project focuses on SQL scripts and Python source code. Local report files and local screenshots can be kept outside the tracked workflow.
