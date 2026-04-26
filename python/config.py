@@ -1,7 +1,10 @@
+import os
+
+
 DB_CONFIG = {
-    "host": "localhost",
-    "port": "your_port",
-    "user": "root",         # đổi nếu m dùng user khác
-    "password": "your_password",  # đổi nếu m đã đặt pass khác
-    "database": "your_database"
+    "host": os.getenv("OEM_DB_HOST", "localhost"),
+    "port": int(os.getenv("OEM_DB_PORT", "3306")),
+    "user": os.getenv("OEM_DB_USER", "root"),
+    "password": os.getenv("OEM_DB_PASSWORD", ""),
+    "database": os.getenv("OEM_DB_NAME", "office_equipment_management"),
 }

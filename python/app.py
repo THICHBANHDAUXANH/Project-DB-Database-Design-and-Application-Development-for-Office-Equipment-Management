@@ -1,8 +1,14 @@
 import pandas as pd
 import streamlit as st
 
-from equipment import add_equipment, equipment_options, list_departments, list_equipment
-from maintenance import add_maintenance, list_maintenance
+from equipment import (
+    add_equipment_with_purchase,
+    equipment_options,
+    list_departments,
+    list_equipment,
+    list_vendors,
+)
+from maintenance import add_maintenance, complete_maintenance, list_maintenance
 from reports import (
     current_equipment_usage,
     dashboard_summary,
@@ -74,34 +80,45 @@ def render_equipment_page():
     st.title("Equipment")
     render_table(list_equipment())
 
-    st.subheader("Add Equipment")
+    st.subheader("Add Equipment and Purchase Record")
     departments = list_departments()
     department_map = {row["DepartmentName"]: row["DepartmentID"] for row in departments}
+    vendors = list_vendors()
+    vendor_map = {row["VendorName"]: row["VendorID"] for row in vendors}
 
     with st.form("add_equipment_form", clear_on_submit=True):
         name = st.text_input("Equipment Name")
         equipment_type = st.text_input("Type")
         unit = st.text_input("Unit", value="piece")
         department_name = st.selectbox("Department", list(department_map.keys()))
+        vendor_name = st.selectbox("Vendor", list(vendor_map.keys()))
+        purchase_date = st.date_input("Purchase Date")
+        purchase_value = st.number_input("Purchase Value", min_value=0.0, step=50000.0)
         submitted = st.form_submit_button("Add Equipment")
 
         if submitted:
             if not name.strip() or not equipment_type.strip():
                 st.error("Equipment name and type are required.")
+            elif purchase_value <= 0:
+                st.error("Purchase value must be greater than 0.")
             else:
-                add_equipment(
+                add_equipment_with_purchase(
                     name.strip(),
                     equipment_type.strip(),
                     unit.strip() or "piece",
                     department_map[department_name],
+                    vendor_map[vendor_name],
+                    purchase_date.isoformat(),
+                    float(purchase_value),
                 )
-                st.success("Equipment added successfully.")
+                st.success("Equipment and purchase record added successfully.")
                 st.rerun()
 
 
 def render_maintenance_page():
     st.title("Maintenance")
-    render_table(list_maintenance())
+    maintenance_rows = list_maintenance()
+    render_table(maintenance_rows)
 
     st.subheader("Add Maintenance")
     options = equipment_options()
@@ -128,6 +145,31 @@ def render_maintenance_page():
                 )
                 st.success("Maintenance record added successfully.")
                 st.rerun()
+
+    st.subheader("Complete Maintenance")
+    pending_rows = [row for row in maintenance_rows if row["Status"] != "Completed"]
+
+    if not pending_rows:
+        st.info("No pending maintenance records.")
+    else:
+        pending_map = {
+            f"{row['MaintenanceID']} - {row['EquipmentName']} ({row['MaintenanceDate']})": row[
+                "MaintenanceID"
+            ]
+            for row in pending_rows
+        }
+
+        with st.form("complete_maintenance_form"):
+            maintenance_label = st.selectbox("Pending Maintenance", list(pending_map.keys()))
+            submitted = st.form_submit_button("Mark as Completed")
+
+            if submitted:
+                complete_maintenance(pending_map[maintenance_label])
+                st.success("Maintenance marked as completed.")
+                st.rerun()
+
+    st.subheader("Equipment Status Snapshot")
+    render_table(list_equipment())
 
 
 def render_reports_page():

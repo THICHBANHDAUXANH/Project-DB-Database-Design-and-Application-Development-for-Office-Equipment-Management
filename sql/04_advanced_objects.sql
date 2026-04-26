@@ -65,6 +65,22 @@ SELECT 'Indexes Created' AS Section;
 SHOW INDEX FROM Equipment;
 SHOW INDEX FROM Maintenance;
 
+SELECT 'Index Lookup Example for Equipment Type = Printer' AS Section;
+EXPLAIN
+SELECT EquipmentID, EquipmentName, Type, Status
+FROM Equipment
+WHERE Type = 'Printer';
+
+SELECT EquipmentID, EquipmentName, Type, Status
+FROM Equipment
+WHERE Type = 'Printer'
+ORDER BY EquipmentID;
+
+SELECT 'Equipment Rows Grouped by Type' AS Section;
+SELECT EquipmentID, EquipmentName, Type
+FROM Equipment
+ORDER BY Type, EquipmentID;
+
 CREATE VIEW CurrentEquipmentUsage AS
 SELECT
     e.EquipmentID,
@@ -75,14 +91,14 @@ SELECT
     e.ConditionStatus,
     d.DepartmentName
 FROM Equipment e
-LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID;
+LEFT JOIN Departments d ON e.DepartmentID = d.DepartmentID;# nối department name theo id
 
 CREATE VIEW MaintenanceCostReport AS
 SELECT
     e.EquipmentID,
     e.EquipmentName,
-    COUNT(m.MaintenanceID) AS MaintenanceTimes,
-    IFNULL(SUM(m.Cost), 0) AS TotalMaintenanceCost
+    COUNT(m.MaintenanceID) AS MaintenanceTimes,#đếm số bản ghi bảo thì trồi cho nó vào cột maintence time
+    IFNULL(SUM(m.Cost), 0) AS TotalMaintenanceCost #tỉnh tổng chi phí bảo trì, kco lần bảo thì nào thì ra 0 thay vì null(ifnull func)
 FROM Equipment e
 LEFT JOIN Maintenance m ON e.EquipmentID = m.EquipmentID
 GROUP BY e.EquipmentID, e.EquipmentName;
@@ -96,37 +112,37 @@ SELECT * FROM MaintenanceCostReport ORDER BY TotalMaintenanceCost DESC, Equipmen
 DELIMITER //
 
 CREATE FUNCTION TotalAsset()
-RETURNS DECIMAL(12,2)
+RETURNS DECIMAL(12,2)#hàm trả về số thập phân
 DETERMINISTIC
 BEGIN
-    DECLARE total DECIMAL(12,2);
-    SELECT IFNULL(SUM(Value), 0) INTO total
+    DECLARE total DECIMAL(12,2);# tạo biến total để giữ kết quả
+    SELECT IFNULL(SUM(Value), 0) INTO total#tính
     FROM Purchases;
     RETURN total;
 END //
 
 CREATE PROCEDURE AddMaintenance(
-    IN p_EquipmentID INT,
+    IN p_EquipmentID INT, # nhận 4 input
     IN p_Date DATE,
     IN p_Description TEXT,
     IN p_Cost DECIMAL(12,2)
 )
 BEGIN
     INSERT INTO Maintenance (EquipmentID, MaintenanceDate, Description, Cost, Status)
-    VALUES (p_EquipmentID, p_Date, p_Description, p_Cost, 'Scheduled');
+    VALUES (p_EquipmentID, p_Date, p_Description, p_Cost, 'Scheduled'); # tạo 1 dòng mớ trong bảng maintenance và trạng thái là scheduled
 
     UPDATE Equipment
     SET Status = 'Maintenance'
     WHERE EquipmentID = p_EquipmentID;
-END //
+END //# cập nhật trạng thái thiết bị
 
 CREATE TRIGGER trg_after_maintenance_update
-AFTER UPDATE ON Maintenance
+AFTER UPDATE ON Maintenance # chạy sau khi có update ở bảng maintenace
 FOR EACH ROW
 BEGIN
-    IF NEW.Status = 'Completed' AND OLD.Status <> 'Completed' THEN
+    IF NEW.Status = 'Completed' AND OLD.Status <> 'Completed' THEN # nếu trạng thái mới là complete mà trạng thái cũ chưa phải complete,Tức là chỉ khi một công việc bảo trì vừa mới được chuyển sang hoàn thành, trigger mới chạy tiếp.
         UPDATE Equipment
-        SET Status = 'Available', ConditionStatus = 'Good'
+        SET Status = 'Available', ConditionStatus = 'Good' # tự cập nhật thiết bị liên quan thành available và good
         WHERE EquipmentID = NEW.EquipmentID;
     END IF;
 END //
@@ -146,7 +162,7 @@ CALL AddMaintenance(
     '2026-05-10',
     'Scanner glass cleaning and calibration',
     250000
-);
+);# cách gọi store_proc vừa tạo
 
 SELECT 'After AddMaintenance Procedure' AS Section;
 SELECT EquipmentID, EquipmentName, Status, ConditionStatus
